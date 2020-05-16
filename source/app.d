@@ -11,21 +11,20 @@ int main() {
 	// TODO: replace bool with byte?
 
 
-	// FIXME: test grid
-	grid[tuple(2,2)] = true;
-	grid[tuple(-3,2)] = true;
-	grid[tuple(0,1)] = true;
-	grid[tuple(1,0)] = true;
-	grid[tuple(-1,0)] = true;
-	grid[tuple(-1,-1)] = true;
-	grid[tuple(-1,1)] = true;
+
+	int scale = 24;
+	int ww = 800;
+	int wh = 600;
+	int leftOffset, topOffset;
+	leftOffset = (ww % scale)/2;
+	topOffset = (wh % scale)/2;
 
 	DerelictSFML2Graphics.load("libs\\csfml-graphics-2.dll");
 	DerelictSFML2Graphics.load("libs\\csfml-system-2.dll");
 	DerelictSFML2Window.load("libs\\csfml-window-2.dll");
 
 	// TODO: dynamic video mode
-	auto mode = sfVideoMode(800, 600, 32);
+	auto mode = sfVideoMode(ww, wh);
 	auto window = sfRenderWindow_create(mode, "Game of Life experiment", sfResize | sfClose, null);
 	if (!window)
     return 1;
@@ -44,16 +43,21 @@ int main() {
 
 		// FIXME: drawing cells
 		foreach (key, value; grid) {
-			//writefln("Drawing cell %d %d", key[0], key[1]);
 			auto rectangle = sfRectangleShape_create();
 			sfRectangleShape_setFillColor(rectangle, sfWhite);
-			sfRectangleShape_setSize(rectangle, sfVector2f(1,1));
-			sfRectangleShape_setOrigin(rectangle, sfVector2f(key[0]-400,key[1]-300));
+			sfRectangleShape_setSize(rectangle, sfVector2f(scale, scale));
+			sfRectangleShape_setOrigin(rectangle, sfVector2f(
+				leftOffset + key[1] * scale - ww/2 - scale/2, 
+				topOffset  + key[0] * scale - wh/2 - scale/2
+			));
+			//writefln("Drawing cell at %d %d", key[0]*scale, key[1]*scale);
 
 			sfRenderWindow_drawRectangleShape(window, rectangle, null);
   	}
 
 		sfRenderWindow_display(window);
+
+		//readln();
 	}
 
 	return 0;
