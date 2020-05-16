@@ -30,18 +30,17 @@ int main() {
 	if (!window)
     return 1;
 	
-	//auto text = sfText("...", font, 50);
+	sfEvent event;
 
 	while (sfRenderWindow_isOpen(window)) {
-		sfEvent* event;
-		while (sfRenderWindow_pollEvent(window, event)) {
+		// TODO: game of life algo
+		sfRenderWindow_clear(window, sfBlack);
+
+		while (sfRenderWindow_pollEvent(window, &event)) {
 			if (event.type == sfEvtClosed)
 				sfRenderWindow_close(window);
 		}
 
-		// TODO: game of life algo
-		
-		sfRenderWindow_clear(window, sfBlack);
 
 		// FIXME: drawing cells
 		foreach (key, value; grid) {
