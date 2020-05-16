@@ -1,5 +1,8 @@
+module main;
+
 import std.stdio;
 import std.typecons;
+import std.algorithm;
 import derelict.sfml2.window;
 import derelict.sfml2.system;
 import derelict.sfml2.graphics;
@@ -7,17 +10,28 @@ import derelict.sfml2.graphics;
 alias Coord = Tuple!(int, int);
 
 int main() {
+	// TODO: Split globals and management funcs to different files/modules
+	void recalculateScale(int ww, int wh, int gw, int gh, int *scale, int *leftOffset, int *topOffset) {
+		(*scale) = min(ww/gw, wh/gh);
+		(*leftOffset) = (ww % (*scale))/2;
+		(*topOffset) = (wh % (*scale))/2;
+	}
+
 	bool[Coord] grid;
 	// TODO: replace bool with byte?
 
 
 
-	int scale = 24;
+
+	int gridWidth = 200;
+	int gridHeight = 150;
+
 	int ww = 800;
 	int wh = 600;
+
+	int scale;
 	int leftOffset, topOffset;
-	leftOffset = (ww % scale)/2;
-	topOffset = (wh % scale)/2;
+	recalculateScale(ww, wh, gridWidth, gridHeight, &scale, &leftOffset, &topOffset);
 
 	DerelictSFML2Graphics.load("libs\\csfml-graphics-2.dll");
 	DerelictSFML2Graphics.load("libs\\csfml-system-2.dll");
@@ -38,6 +52,14 @@ int main() {
 		while (sfRenderWindow_pollEvent(window, &event)) {
 			if (event.type == sfEvtClosed)
 				sfRenderWindow_close(window);
+			if (event.type == sfEvtResized) {
+        // update the view to the new size of the window
+        auto visibleArea = sfFloatRect(0, 0, event.size.width, event.size.height);
+        sfRenderWindow_setView(window, sfView_createFromRect(visibleArea));
+				ww = event.size.width;
+				wh = event.size.height;
+				recalculateScale(ww, wh, gridWidth, gridHeight, &scale, &leftOffset, &topOffset);
+    	}
 		}
 
 
