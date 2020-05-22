@@ -6,23 +6,10 @@ import std.algorithm;
 alias Coord = Tuple!(int, int);
 
 struct GridStruct {
-  int windowWidth, windowHeight, gridWidth, gridHeight;
-  int leftOffset, topOffset;
-  int scale;
+  int gridWidth, gridHeight;
 
   bool[Coord] alive;
   byte[Coord] dead;
-
-  void recalculateScale() {
-    if (this.windowWidth < this.gridWidth || this.windowHeight < this.gridHeight) {
-      this.scale = 1;
-    } else {
-      this.scale = min(this.windowWidth/this.gridWidth, this.windowHeight/this.gridHeight);
-    }
-    
-		this.leftOffset = (this.windowWidth % this.scale)/2;
-		this.topOffset = (this.windowHeight % this.scale)/2;
-	}
 
   void generateGrid() {
     this.alive[tuple(5,-5)] = true;
@@ -87,23 +74,20 @@ struct GridStruct {
     this.alive[tuple(-3, 1)] = true;
   }
 
-  this(int ww, int wh, int gw, int gh) {
-    this.windowHeight = wh;
-    this.windowWidth = ww;
+  this(int gw, int gh) {
     this.gridHeight = gh;
     this.gridWidth = gw;
 
-    this.recalculateScale();
     this.generateGrid();
   }
 
-  int calculateX(int coord) {
-    return coord * this.scale - this.windowWidth/2 + this.scale/2;
+  void iterate() {
+    this.alive[tuple(5,-9)] = true;
+    this.alive[tuple(4,-9)] = true;
+    this.alive[tuple(4,-9)] = true;
+    this.alive[tuple(4,-9)] = true;
+    this.alive[tuple(4,-9)] = true;
+    this.alive[tuple(4,-9)] = true;
+    this.alive[tuple(3,-9)] = true;
   }
-
-  int calculateY(int coord) {
-    return coord * this.scale - this.windowHeight/2 + this.scale/2;
-  }
-
-  void iterate() {}
 }
