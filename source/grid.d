@@ -2,6 +2,9 @@ module grid;
 
 import std.typecons;
 import std.algorithm;
+import std.random;
+
+import std.stdio;
 
 alias Coord = Tuple!(int, int);
 
@@ -11,67 +14,24 @@ struct GridStruct {
   bool[Coord] alive;
   byte[Coord] dead;
 
+  void initGrid() {
+    // TODO: multiple ways to init grid
+  }
+
   void generateGrid() {
-    this.alive[tuple(5,-5)] = true;
-    this.alive[tuple(4,-5)] = true;
-    this.alive[tuple(4,-4)] = true;
-    this.alive[tuple(4,-3)] = true;
-    this.alive[tuple(4,-2)] = true;
-    this.alive[tuple(4,-1)] = true;
-    this.alive[tuple(3,-1)] = true;
-
-    this.alive[tuple(5, 5)] = true;
-    this.alive[tuple(4, 5)] = true;
-    this.alive[tuple(4, 4)] = true;
-    this.alive[tuple(4, 3)] = true;
-    this.alive[tuple(4, 2)] = true;
-    this.alive[tuple(4, 1)] = true;
-    this.alive[tuple(3, 1)] = true;
-
-    this.alive[tuple(2,-2)] = true;
-    this.alive[tuple(2,-1)] = true;
-    this.alive[tuple(2,-0)] = true;
-    this.alive[tuple(2, 1)] = true;
-    this.alive[tuple(2, 2)] = true;
-
-    this.alive[tuple(1,-2)] = true;
-    this.alive[tuple(1, 2)] = true;
-
-    this.alive[tuple(0, -5)] = true;
-    this.alive[tuple(0, -4)] = true;
-    this.alive[tuple(0, -3)] = true;
-    this.alive[tuple(0, -2)] = true;
-
-    this.alive[tuple(0, 0)] = true;
-
-    this.alive[tuple(0, 2)] = true;
-    this.alive[tuple(0, 3)] = true;
-    this.alive[tuple(0, 4)] = true;
-    this.alive[tuple(0, 5)] = true;
-
-    this.alive[tuple(-1,-2)] = true;
-    this.alive[tuple(-1, 2)] = true;
-
-    this.alive[tuple(-2,-2)] = true;
-    this.alive[tuple(-2,-1)] = true;
-    this.alive[tuple(-2, 1)] = true;
-    this.alive[tuple(-2, 2)] = true;
-
-    this.alive[tuple(-5,-5)] = true;
-    this.alive[tuple(-4,-5)] = true;
-    this.alive[tuple(-4,-4)] = true;
-    this.alive[tuple(-4,-3)] = true;
-    this.alive[tuple(-4,-2)] = true;
-    this.alive[tuple(-4,-1)] = true;
-    this.alive[tuple(-3,-1)] = true;
-
-    this.alive[tuple(-5, 5)] = true;
-    this.alive[tuple(-4, 5)] = true;
-    this.alive[tuple(-4, 4)] = true;
-    this.alive[tuple(-4, 3)] = true;
-    this.alive[tuple(-4, 2)] = true;
-    this.alive[tuple(-4, 1)] = true;
-    this.alive[tuple(-3, 1)] = true;
+    const int halfWidth = this.gridWidth/2;
+    const int halfHeight = this.gridHeight/2;
+    for (int i = -halfWidth; i < halfWidth; i++) {
+      for (int j = -halfHeight; j < halfHeight; j++) {
+        const auto nv = uniform(0, 10);
+        if (nv > 6) { // a workaround to get a better looking result
+          // uniform 0,1 always returns 0 and unform 0,2 is too cluttered
+          // but getting uniform 0,10 and setting true when the value
+          // is in the upper half will do the trick
+          this.alive[tuple(i,j)] = true;
+        }
+      }
+    }
   }
 
   this(int gw, int gh) {
