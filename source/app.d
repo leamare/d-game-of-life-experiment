@@ -9,7 +9,7 @@ import grid;
 import renderer;
 
 int main() {
-	auto grid = GridStruct(64, 64);
+	auto grid = GridStruct(160, 90);
 	auto render = Renderer(800, 600, &grid);
 
 	DerelictSFML2Graphics.load("libs\\csfml-graphics-2.dll");
@@ -47,8 +47,8 @@ int main() {
 			sfRectangleShape_setFillColor(rectangle, sfWhite);
 			sfRectangleShape_setSize(rectangle, sfVector2f(render.scale, render.scale));
 			sfRectangleShape_setOrigin(rectangle, sfVector2f(
-				render.calculateX(key[1]), 
-				render.calculateY(key[0])
+				render.calculateX(key[0]), 
+				render.calculateY(key[1])
 			));
 			sfRenderWindow_drawRectangleShape(window, rectangle, null);
   	}
