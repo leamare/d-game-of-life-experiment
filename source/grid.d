@@ -12,7 +12,7 @@ struct GridStruct {
   int gridWidth, gridHeight;
 
   bool[Coord] alive;
-  byte[Coord] dead;
+  ubyte[Coord] dead;
 
   void initGrid() {
     // TODO: multiple ways to init grid
@@ -37,6 +37,11 @@ struct GridStruct {
   void iterate() {
     bool[Coord] updated;
 
+    foreach (key, value; this.dead) {
+      if (value < 64)
+			  this.dead[key]++;
+  	}
+
     const int halfWidth = this.gridWidth/2;
     const int halfHeight = this.gridHeight/2;
     for (int i = -halfWidth; i < halfWidth; i++) {
@@ -52,17 +57,17 @@ struct GridStruct {
           }
         }
         if (tuple(i,j) in this.alive && this.alive[tuple(i,j)]) {
-          if (nb == 2 || nb == 3)
+          if (nb == 2 || nb == 3) {
             updated[tuple(i,j)] = true;
-          else {
-            if (tuple(i,j) in this.dead)
-              this.dead[tuple(i,j)]++;
-            else 
-              this.dead[tuple(i,j)] = 1;
+          } else {
+            this.dead[tuple(i,j)] = 1;
           }
         } else {
-          if (nb == 3)
+          if (nb == 3) {
             updated[tuple(i,j)] = true;
+            if (tuple(i,j) in this.dead)
+              this.dead.remove(tuple(i,j));
+          }
         }
       }
     }

@@ -42,9 +42,11 @@ int main() {
 		grid.iterate();
 
 		// FIXME: drawing cells
-		foreach (key, value; grid.alive) {
+		foreach (key, value; grid.dead) {
 			auto rectangle = sfRectangleShape_create();
-			sfRectangleShape_setFillColor(rectangle, sfWhite);
+			auto color = sfColor(0, 0, 255, cast(ubyte)(255/(1+value/2)));
+			// printf("\t %d", value);
+			sfRectangleShape_setFillColor(rectangle, color);
 			sfRectangleShape_setSize(rectangle, sfVector2f(render.scale, render.scale));
 			sfRectangleShape_setOrigin(rectangle, sfVector2f(
 				render.calculateX(key[0]), 
@@ -54,6 +56,17 @@ int main() {
   	}
 
 		sfRenderWindow_display(window);
+	}
+
+	foreach (key, value; grid.alive) {
+		auto rectangle = sfRectangleShape_create();
+		sfRectangleShape_setFillColor(rectangle, sfWhite);
+		sfRectangleShape_setSize(rectangle, sfVector2f(render.scale, render.scale));
+		sfRectangleShape_setOrigin(rectangle, sfVector2f(
+			render.calculateX(key[0]), 
+			render.calculateY(key[1])
+		));
+		sfRenderWindow_drawRectangleShape(window, rectangle, null);
 	}
 
 	return 0;
