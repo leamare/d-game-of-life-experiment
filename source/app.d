@@ -9,8 +9,9 @@ import grid;
 import renderer;
 
 int main() {
-	auto grid = GridStruct(160, 90);
-	auto render = Renderer(800, 600, &grid);
+	auto grid = GridStruct(16*16, 9*16);
+	auto render = Renderer(16*70, 9*70, &grid);
+	const auto baseColor = sfColor(0, 64, 255, 255);
 
 	DerelictSFML2Graphics.load("libs\\csfml-graphics-2.dll");
 	DerelictSFML2Graphics.load("libs\\csfml-system-2.dll");
@@ -42,9 +43,12 @@ int main() {
 		grid.iterate();
 
 		// FIXME: drawing cells
+
+		auto rectangle = sfRectangleShape_create();
+		auto color = sfColor(baseColor.r, baseColor.g, baseColor.b, 0);
+
 		foreach (key, value; grid.dead) {
-			auto rectangle = sfRectangleShape_create();
-			auto color = sfColor(0, 0, 255, cast(ubyte)(255/(1+value/2)));
+			color.a = cast(ubyte)( baseColor.a /(1+value/4));
 			// printf("\t %d", value);
 			sfRectangleShape_setFillColor(rectangle, color);
 			sfRectangleShape_setSize(rectangle, sfVector2f(render.scale, render.scale));
@@ -55,18 +59,17 @@ int main() {
 			sfRenderWindow_drawRectangleShape(window, rectangle, null);
   	}
 
-		sfRenderWindow_display(window);
-	}
+		foreach (key, value; grid.alive) {
+			sfRectangleShape_setFillColor(rectangle, sfWhite);
+			sfRectangleShape_setSize(rectangle, sfVector2f(render.scale, render.scale));
+			sfRectangleShape_setOrigin(rectangle, sfVector2f(
+				render.calculateX(key[0]), 
+				render.calculateY(key[1])
+			));
+			sfRenderWindow_drawRectangleShape(window, rectangle, null);
+		}
 
-	foreach (key, value; grid.alive) {
-		auto rectangle = sfRectangleShape_create();
-		sfRectangleShape_setFillColor(rectangle, sfWhite);
-		sfRectangleShape_setSize(rectangle, sfVector2f(render.scale, render.scale));
-		sfRectangleShape_setOrigin(rectangle, sfVector2f(
-			render.calculateX(key[0]), 
-			render.calculateY(key[1])
-		));
-		sfRenderWindow_drawRectangleShape(window, rectangle, null);
+		sfRenderWindow_display(window);
 	}
 
 	return 0;
