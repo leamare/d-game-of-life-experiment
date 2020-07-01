@@ -29,6 +29,8 @@ int main() {
 	if (!window)
     return 1;
 
+	auto rectangle = sfRectangleShape_create();
+
 	sfEvent event;
 	while (sfRenderWindow_isOpen(window)) {
 		sfRenderWindow_clear(window, sfBlack);
@@ -50,7 +52,6 @@ int main() {
 
 		// FIXME: drawing cells
 
-		auto rectangle = sfRectangleShape_create();
 		auto color = sfColor(baseColor.r, baseColor.g, baseColor.b, 0);
 
 		foreach (key, value; grid.dead) {
