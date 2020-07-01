@@ -9,9 +9,15 @@ import grid;
 import renderer;
 
 int main() {
-	auto grid = GridStruct(16*16, 9*16);
-	auto render = Renderer(16*70, 9*70, &grid);
-	const auto baseColor = sfColor(0, 64, 255, 255);
+	const auto baseColor = sfColor(0, 96, 255, 192);
+	const auto cellColor = sfColor(255, 255, 255, 255);
+	const ubyte fadeOutSpeed = 4;
+	const ubyte ditFadeOutSpeed = 6;
+	const ubyte deadMaxColor = baseColor.a / fadeOutSpeed;
+	const byte deadInitialTrail = cast(byte)(cellColor.r / (ditFadeOutSpeed*fadeOutSpeed) - 2);
+
+	auto grid = GridStruct(16*16, 9*16, deadMaxColor);
+	auto render = Renderer(16*80, 9*80, &grid);
 
 	DerelictSFML2Graphics.load("libs\\csfml-graphics-2.dll");
 	DerelictSFML2Graphics.load("libs\\csfml-system-2.dll");
@@ -48,8 +54,14 @@ int main() {
 		auto color = sfColor(baseColor.r, baseColor.g, baseColor.b, 0);
 
 		foreach (key, value; grid.dead) {
-			color.a = cast(ubyte)( baseColor.a /(1+value/4));
-			// printf("\t %d", value);
+			color.a = cast(ubyte)( baseColor.a - (value-1)*fadeOutSpeed );
+			// color.a = cast(ubyte)( baseColor.a / (1+value/fadeOutSpeed) );
+			if (value < deadInitialTrail) {
+				color.r = cast(ubyte)( cellColor.r - (value+2)*ditFadeOutSpeed*fadeOutSpeed );
+			} else {
+				color.r = baseColor.r;
+			}
+			
 			sfRectangleShape_setFillColor(rectangle, color);
 			sfRectangleShape_setSize(rectangle, sfVector2f(render.scale, render.scale));
 			sfRectangleShape_setOrigin(rectangle, sfVector2f(
@@ -60,7 +72,7 @@ int main() {
   	}
 
 		foreach (key, value; grid.alive) {
-			sfRectangleShape_setFillColor(rectangle, sfWhite);
+			sfRectangleShape_setFillColor(rectangle, cellColor);
 			sfRectangleShape_setSize(rectangle, sfVector2f(render.scale, render.scale));
 			sfRectangleShape_setOrigin(rectangle, sfVector2f(
 				render.calculateX(key[0]), 

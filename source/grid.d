@@ -10,6 +10,7 @@ alias Coord = Tuple!(int, int);
 
 struct GridStruct {
   int gridWidth, gridHeight;
+  ubyte deadMaxColor;
 
   bool[Coord] alive;
   ubyte[Coord] dead;
@@ -42,7 +43,7 @@ struct GridStruct {
     int i, j, inb, jnb;
 
     foreach (key, value; this.dead) {
-      if (value < 128)
+      if (value < this.deadMaxColor)
 			  this.dead[key]++;
       else
         this.dead.remove(key);
@@ -102,9 +103,10 @@ struct GridStruct {
     }
   }
 
-  this(int gw, int gh) {
+  this(int gw, int gh, ubyte deadMaxColor) {
     this.gridHeight = gh;
     this.gridWidth = gw;
+    this.deadMaxColor = deadMaxColor;
 
     this.generateGrid();
   }
