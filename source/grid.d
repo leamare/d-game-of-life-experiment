@@ -25,8 +25,8 @@ struct GridStruct {
     auto key = tuple(0,0);
     for (int i = -halfWidth; i < halfWidth; i++) {
       for (int j = -halfHeight; j < halfHeight; j++) {
-        const auto nv = uniform(0, 10);
-        if (nv > 7) { // a workaround to get a better looking result
+        const auto nv = uniform(0, 20);
+        if (nv > 16) { // a workaround to get a better looking result
           // uniform 0,1 always returns 0 and unform 0,2 is too cluttered
           // but getting uniform 0,10 and setting true when the value
           // is in the upper half will do the trick

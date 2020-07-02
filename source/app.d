@@ -16,8 +16,11 @@ int main() {
 	const ubyte deadMaxColor = baseColor.a / fadeOutSpeed;
 	const byte deadInitialTrail = cast(byte)(cellColor.r / (ditFadeOutSpeed*fadeOutSpeed) - 2);
 
-	auto grid = GridStruct(16*16, 9*16, deadMaxColor);
-	auto render = Renderer(16*80, 9*80, &grid);
+	const uint gridMultiplier = 24;
+	const uint renderMultiplier = 100;
+
+	auto grid = GridStruct(16*gridMultiplier, 9*gridMultiplier, deadMaxColor);
+	auto render = Renderer(16*renderMultiplier, 9*renderMultiplier, &grid);
 
 	DerelictSFML2Graphics.load("libs\\csfml-graphics-2.dll");
 	DerelictSFML2Graphics.load("libs\\csfml-system-2.dll");
