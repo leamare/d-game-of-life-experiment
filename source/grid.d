@@ -5,6 +5,9 @@ import std.algorithm;
 import std.random;
 
 import std.stdio;
+import std.conv;
+import std.string;
+import core.stdc.string : strlen;
 
 alias Coord = Tuple!(int, int);
 
@@ -15,11 +18,16 @@ struct GridStruct {
   bool[Coord] alive;
   ubyte[Coord] dead;
 
-  void initGrid() {
-    // TODO: multiple ways to init grid
+  void initGrid(char[] buf) {
+    auto const sz = strlen(buf.ptr);
+    if (sz) {
+      generateRLEGrid(buf);
+    } else {
+      generateRandomGrid();
+    }
   }
 
-  void generateGrid() {
+  void generateRandomGrid() {
     const int halfWidth = this.gridWidth/2;
     const int halfHeight = this.gridHeight/2;
     auto key = tuple(0,0);
@@ -34,6 +42,127 @@ struct GridStruct {
           key[1] = j;
           this.alive[key] = true;
         }
+      }
+    }
+  }
+
+  void generateRLEGrid(char[] buf) {
+    auto const sz = strlen(buf.ptr);
+
+    int halfWidth = this.gridWidth/2;
+    int halfHeight = this.gridHeight/2;
+
+    bool skipline = false;
+    bool firstline = true;
+    bool varlock = false;
+    bool varassign = false;
+    
+    string assignVar = "";
+    string assignVal = "";
+
+    string[string] vars;
+    int x, y;
+
+    int cnt = 0;
+    int xOffset, yOffset;
+    int gridX = 0; int gridY = 0;
+    auto key = tuple(0,0);
+
+    for(int i = 0; i < sz; i++) {
+      if (buf[i] == '#') {
+        skipline = true;
+        continue;
+      }
+      if (buf[i] == '\n' && (!firstline || skipline)) {
+        if (!skipline && firstline) firstline = false;
+        skipline = false;
+        continue;
+      }
+      if (skipline) {
+        continue;
+      }
+      if (firstline) {
+        if (buf[i] == ' ' && !varlock) {
+          if (strlen(assignVar.ptr)) {
+            varlock = true;
+            continue;
+          } else {
+            continue;
+          }
+        } else if (buf[i] == '=' && varlock) {
+          varassign = true;
+          continue;
+        } else if (!varlock) {
+          assignVar = assignVar ~ buf[i];
+        }
+
+        if (varassign) {
+          if (buf[i] == ' ') {
+            continue;
+          } else if (buf[i] == ',' || buf[i] == '\n') {
+            vars[assignVar] = assignVal;
+
+            if (assignVar == "x") x = parse!int(assignVal);
+            if (assignVar == "y") y = parse!int(assignVal);
+
+            assignVal = "";
+            assignVar = "";
+            varassign = false;
+            varlock = false;
+          } else {
+            assignVal = assignVal ~ buf[i];
+          }
+        }
+
+        if (buf[i] == '\n') {
+          firstline = false;
+
+          if (this.gridHeight < y) {
+            this.gridHeight = y;
+            halfHeight = this.gridHeight/2;
+          }
+          yOffset = y/2;
+
+          if (this.gridWidth < x) {
+            this.gridWidth = x;
+            halfWidth = this.gridWidth/2;
+          }
+          xOffset = x/2;
+
+          assignVal = "";
+
+          foreach (k, value; vars) {
+            writeln(k ~ " = " ~ value);
+          }
+        }
+      } else {
+        if (buf[i] == 'b' || buf[i] == 'o' || buf[i] == '$') {
+          if (empty(assignVal)) {
+            cnt = 1;
+          } else {
+            cnt = parse!int(assignVal);
+          }
+
+          if (buf[i] == 'b') {
+            gridX += cnt;
+          } else if (buf[i] == 'o') {
+            for (int j = 0; j < cnt; j++) {
+              key[0] = gridX - xOffset;
+              key[1] = gridY - yOffset;
+              this.alive[key] = true;
+
+              gridX++;
+            }
+          } else {
+            gridY++;
+            gridX = 0;
+          }
+          
+          assignVal = "";
+        } else if (buf[i] != '\n' && buf[i] != '\r') {
+          assignVal = assignVal ~ buf[i];
+        }
+        
       }
     }
   }
@@ -108,6 +237,7 @@ struct GridStruct {
     this.gridWidth = gw;
     this.deadMaxColor = deadMaxColor;
 
-    this.generateGrid();
+    //this.generateRandomGrid();
+    //this.initGrid();
   }
 }

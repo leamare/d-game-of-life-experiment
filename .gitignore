@@ -16,3 +16,4 @@ game-of-life-experiment-test-*
 .vs/*
 *.sln
 libs/
+*.rle
