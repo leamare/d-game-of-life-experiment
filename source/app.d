@@ -21,7 +21,7 @@ int main() {
 	const ubyte deadMaxColor = baseColor.a / fadeOutSpeed;
 	const byte deadInitialTrail = cast(byte)(cellColor.r / (ditFadeOutSpeed*fadeOutSpeed) - 2);
 
-	const uint gridMultiplier = 24;
+	const uint gridMultiplier = 100;
 	const uint renderMultiplier = 100;
 
 	auto f = File(rlesrc, "r");
@@ -64,6 +64,7 @@ int main() {
     	}
 		}
 
+		
 		grid.iterate();
 
 		// FIXME: drawing cells

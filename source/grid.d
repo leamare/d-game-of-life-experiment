@@ -179,57 +179,84 @@ struct GridStruct {
   	}
 
     auto keyNb = tuple(0,0);
-    auto key = tuple(0,0);
+    // auto key = tuple(0,0);
 
-    const int halfWidth = this.gridWidth/2;
-    const int halfHeight = this.gridHeight/2;
-    for (i = -halfWidth; i < halfWidth; i++) {
-      for (j = -halfHeight; j < halfHeight; j++) {
-        short nb = 0;
-        for (inb = i-1; inb <= i+1; inb++) {
-          for (jnb = j-1; jnb <= j+1; jnb++) {
-            if (i == inb && j == jnb) continue;
-            keyNb[0] = inb;
-            keyNb[1] = jnb;
-            // if (i < -halfWidth || i > halfWidth) continue;
-            // if (j < -halfHeight || j > halfHeight) continue;
-            if (keyNb in this.alive && this.alive[keyNb])
-              nb++;
-          }
+    // TODO: C1 - find potential cells, make them false by default
+
+    int limitX, limitY;
+
+    foreach (k, value; this.alive) {
+      for (inb = k[0]-1, limitX = k[0]+1; inb <= limitX; inb++) {
+        for (jnb = k[1]-1, limitY = k[1]+1; jnb <= limitY; jnb++) {
+          keyNb[0] = inb;
+          keyNb[1] = jnb;
+          updated[keyNb] = false;
         }
+      }
+  	}
 
-        key[0] = i;
-        key[1] = j;
-        if (key in this.alive && this.alive[key]) {
-          if (nb == 2 || nb == 3) {
-            updated[key] = true;
-          } else {
-            this.dead[key] = 1;
-          }
+    // TODO: C2 - calculate for all the potential cells, if died - assign dead
+    short nb = 0;
+
+    foreach (k, value; updated) {
+      nb = 0;
+
+      for (inb = k[0]-1, limitX = k[0]+1; inb <= limitX; inb++) {
+        for (jnb = k[1]-1, limitY = k[1]+1; jnb <= limitY; jnb++) {
+          if (k[0] == inb && k[1] == jnb) continue;
+
+          keyNb[0] = inb;
+          keyNb[1] = jnb;
+
+          if (keyNb in this.alive && this.alive[keyNb])
+            nb++;
+        }
+      }
+      
+      if (k in this.alive && this.alive[k]) {
+        if (nb == 2 || nb == 3) {
+          updated[k] = true;
         } else {
-          if (nb == 3) {
-            updated[key] = true;
-            if (key in this.dead)
-              this.dead.remove(key);
-          }
+          updated.remove(k);
+          this.dead[k] = 1;
+        }
+      } else {
+        if (nb == 3) {
+          updated[k] = true;
+          if (k in this.dead)
+            this.dead.remove(k);
+        } else {
+          updated.remove(k);
         }
       }
-    }
+  	}
 
-    for (i = -halfWidth; i < halfWidth; i++) {
-      for (j = -halfHeight; j < halfHeight; j++) {
-        key[0] = i;
-        key[1] = j;
+    // TODO: C3 - run over the new grid, remove bad cells
+
+    // foreach (key, value; this.alive) {
+    //   this.alive.remove(key);
+  	// }
+
+    // foreach (key, value; updated) {
+    //   this.alive[key] = value;
+  	// }
+
+    this.alive = updated;
+
+    // for (i = -halfWidth; i < halfWidth; i++) {
+    //   for (j = -halfHeight; j < halfHeight; j++) {
+    //     key[0] = i;
+    //     key[1] = j;
         
-        if (key in this.alive && this.alive[key]) {
-          this.alive.remove(key);
-        }
+    //     if (key in this.alive && this.alive[key]) {
+    //       this.alive.remove(key);
+    //     }
 
-        if (key in updated && updated[key]) {
-          this.alive[key] = updated[key];
-        }
-      }
-    }
+    //     if (key in updated && updated[key]) {
+    //       this.alive[key] = updated[key];
+    //     }
+    //   }
+    // }
   }
 
   this(int gw, int gh, ubyte deadMaxColor) {
