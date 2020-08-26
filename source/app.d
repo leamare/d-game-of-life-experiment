@@ -1,6 +1,12 @@
 module main;
 
 import std.stdio;
+import std.getopt;
+import std.conv;
+import std.string;
+import std.file;
+import std.json;
+
 import derelict.sfml2.window;
 import derelict.sfml2.system;
 import derelict.sfml2.graphics;
@@ -8,32 +14,70 @@ import derelict.sfml2.graphics;
 import grid;
 import renderer;
 
-import std.conv;
+int main(string[] args) {
+	string rlesrc = "";
 
-int main() {
-	const auto rlesrc = "test.rle";
+	// args
 
-	const auto baseColor = sfColor(0, 96, 255, 224);
-	const auto cellColor = sfColor(255, 255, 255, 255);
-	const ubyte fadeOutSpeed = 8;
-	const ubyte ditFadeOutSpeed = 4;
+	// config init
+
+	string configFname;
+	if (exists("config.json")) configFname = "config.json";
+	else configFname = "config.example.json";
+
+	JSONValue jsonConf;
+
+	if (exists(configFname)) {
+		jsonConf = parseJSON(readText(configFname));
+	}
+	// TODO: there may be a version of default config
+
+	// init defaults
+
+	const auto baseColor = sfColor(
+		cast(byte)(jsonConf["baseColor"]["r"].integer), 
+		cast(byte)(jsonConf["baseColor"]["g"].integer), 
+		cast(byte)(jsonConf["baseColor"]["b"].integer), 
+		cast(byte)(jsonConf["baseColor"]["a"].integer)
+	);
+
+	const auto cellColor = sfColor(
+		cast(byte)(jsonConf["aliveColor"]["r"].integer), 
+		cast(byte)(jsonConf["aliveColor"]["g"].integer), 
+		cast(byte)(jsonConf["aliveColor"]["b"].integer), 
+		cast(byte)(jsonConf["aliveColor"]["a"].integer)
+	);
+
+	const ubyte fadeOutSpeed = cast(byte)(jsonConf["fadeOutSpeed"].integer);
+	const ubyte ditFadeOutSpeed = cast(byte)(jsonConf["ditFadeOutSpeed"].integer);
+
 	const ubyte ditFadeOutSpeedMulti = cast(byte)((cellColor.r-baseColor.r) / (ditFadeOutSpeed*2));
 	const ubyte deadMaxColor = baseColor.a / fadeOutSpeed;
 	const byte deadInitialTrail = cast(byte)(cellColor.r / (ditFadeOutSpeed*fadeOutSpeed) - 2);
 
-	const uint gridMultiplier = 100;
-	const uint renderMultiplier = 100;
+	const uint gridMultiplier = cast(uint)(jsonConf["gridMultiplier"].integer);
+	const uint renderMultiplier = cast(uint)(jsonConf["renderMultiplier"].integer);
+	const ubyte aspectRatioX = cast(byte)(jsonConf["aspectRatioX"].integer);
+	const ubyte aspectRatioY = cast(byte)(jsonConf["aspectRatioY"].integer);
+
+	const int windowWidth = aspectRatioX * renderMultiplier;
+	const int windowHeight = aspectRatioY * renderMultiplier;
+	
+	const int gridWidth = aspectRatioX * gridMultiplier;
+	const int gridHeight = aspectRatioY * gridMultiplier;
+
+	// load grid from file
 
 	auto f = File(rlesrc, "r");
 	auto buf = f.rawRead(new char[f.size()]);
 
-	//writeln(buf);
+	// init grid
 
+	auto grid = GridStruct(gridWidth, gridHeight, deadMaxColor);
 
-	auto grid = GridStruct(16*gridMultiplier, 9*gridMultiplier, deadMaxColor);
 	grid.initGrid(buf);
 
-	auto render = Renderer(16*renderMultiplier, 9*renderMultiplier, &grid);
+	auto render = Renderer(windowWidth, windowHeight, &grid);
 
 	DerelictSFML2Graphics.load("libs\\csfml-graphics-2.dll");
 	DerelictSFML2Graphics.load("libs\\csfml-system-2.dll");
