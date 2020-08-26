@@ -19,6 +19,18 @@ int main(string[] args) {
 
 	// args
 
+	auto helpInformation = getopt(
+    args,
+    "file|f", "Path to RLE file containing a pattern", &rlesrc,
+  );
+
+	if (helpInformation.helpWanted)
+  {
+    defaultGetoptPrinter("Some information about the program.",
+      helpInformation.options);
+		return 0;
+  }
+
 	// config init
 
 	string configFname;
@@ -68,8 +80,11 @@ int main(string[] args) {
 
 	// load grid from file
 
-	auto f = File(rlesrc, "r");
-	auto buf = f.rawRead(new char[f.size()]);
+	string buf = "";
+
+	if (rlesrc.length && exists(rlesrc)) {
+		buf = readText(rlesrc);
+	}
 
 	// init grid
 

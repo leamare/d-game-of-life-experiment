@@ -18,10 +18,11 @@ struct GridStruct {
   bool[Coord] alive;
   ubyte[Coord] dead;
 
-  void initGrid(char[] buf) {
-    auto const sz = strlen(buf.ptr);
+  void initGrid(string buf) {
+    auto const sz = buf.length;
+    writeln(sz);
     if (sz) {
-      generateRLEGrid(buf);
+      generateRLEGrid(buf.dup);
     } else {
       generateRandomGrid();
     }
@@ -34,7 +35,7 @@ struct GridStruct {
     for (int i = -halfWidth; i < halfWidth; i++) {
       for (int j = -halfHeight; j < halfHeight; j++) {
         const auto nv = uniform(0, 20);
-        if (nv > 16) { // a workaround to get a better looking result
+        if (nv > 17) { // a workaround to get a better looking result
           // uniform 0,1 always returns 0 and unform 0,2 is too cluttered
           // but getting uniform 0,10 and setting true when the value
           // is in the upper half will do the trick
@@ -169,7 +170,7 @@ struct GridStruct {
 
   void iterate() {
     bool[Coord] updated;
-    int i, j, inb, jnb;
+    int inb, jnb;
 
     foreach (key, value; this.dead) {
       if (value < this.deadMaxColor)
@@ -188,9 +189,11 @@ struct GridStruct {
     foreach (k, value; this.alive) {
       for (inb = k[0]-1, limitX = k[0]+1; inb <= limitX; inb++) {
         for (jnb = k[1]-1, limitY = k[1]+1; jnb <= limitY; jnb++) {
-          keyNb[0] = inb;
-          keyNb[1] = jnb;
-          updated[keyNb] = false;
+          if (!(tuple(inb, jnb) in updated)) {
+            keyNb[0] = inb;
+            keyNb[1] = jnb;
+            updated[keyNb] = false;
+          }
         }
       }
   	}
