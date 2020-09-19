@@ -234,32 +234,7 @@ struct GridStruct {
       }
   	}
 
-    // TODO: C3 - run over the new grid, remove bad cells
-
-    // foreach (key, value; this.alive) {
-    //   this.alive.remove(key);
-  	// }
-
-    // foreach (key, value; updated) {
-    //   this.alive[key] = value;
-  	// }
-
     this.alive = updated;
-
-    // for (i = -halfWidth; i < halfWidth; i++) {
-    //   for (j = -halfHeight; j < halfHeight; j++) {
-    //     key[0] = i;
-    //     key[1] = j;
-        
-    //     if (key in this.alive && this.alive[key]) {
-    //       this.alive.remove(key);
-    //     }
-
-    //     if (key in updated && updated[key]) {
-    //       this.alive[key] = updated[key];
-    //     }
-    //   }
-    // }
   }
 
   this(int gw, int gh, ubyte deadMaxColor) {

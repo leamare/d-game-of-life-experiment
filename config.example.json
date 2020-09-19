@@ -13,6 +13,6 @@
 
   "aspectRatioX": 16,
   "aspectRatioY": 9,
-  "gridMultiplier": 50,
+  "gridMultiplier": 100,
   "renderMultiplier": 100
 }

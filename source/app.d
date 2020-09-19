@@ -88,6 +88,8 @@ int main(string[] args) {
 
 	// init grid
 
+	uint gen = 0;
+
 	auto grid = GridStruct(gridWidth, gridHeight, deadMaxColor);
 
 	grid.initGrid(buf);
@@ -125,6 +127,10 @@ int main(string[] args) {
 
 		
 		grid.iterate();
+
+		gen++;
+
+		printf("Generation: %d\t- Cells: %d\n", gen, grid.alive.length);
 
 		// FIXME: drawing cells
 
