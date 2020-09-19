@@ -1,12 +1,28 @@
 # Conway's Game of Life Experiment in Dlang (C GOLED)
 
-to install
-1. dub and D compiler
-2. dub fetch
-3. get some libs to either ./libs/... directory or your system
-  - required libs are CSFML
+Conway's Gamee of Life implementation in D.
+
+SFML used for graphics. Capable of loading RLE files or generating a random grid.
+
+TODO: 
+ - [x] Sparse implementation (using Dlang's assoc arrays)
+ - [ ] Different rules
+   - [ ] Primary rule
+   - [ ] Allow rule override from RLE (config)
+   - [ ] Parse B/S notation
+ - [ ] Camera movement
+ - [ ] Multithreading
+ - [ ] Saving resulting generations as BMPs
+ - [ ] GPU computations
+ - [ ] Switchable implementation, dense implementation using hashlife
+
+## Build and install
+
+1. Install DUB and Dlang compiler. My go-to choice is DMD compiler specifically
+2. Get some libs to either ./libs/... directory or your system
+  - You need CSFML libs, you can find them on the SFML website
   - path is platform dependant
-4. dub run
+3. `dub run`
 
 ## cli
 
