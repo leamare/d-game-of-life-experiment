@@ -135,6 +135,8 @@ int main(string[] args) {
 		// FIXME: drawing cells
 
 		auto color = sfColor(baseColor.r, baseColor.g, baseColor.b, 0);
+		int wx, wy;
+		sfRectangleShape_setSize(rectangle, sfVector2f(render.scale, render.scale));
 
 		foreach (key, value; grid.dead) {
 			color.a = cast(ubyte)( baseColor.a - (value-1)*fadeOutSpeed );
@@ -144,24 +146,34 @@ int main(string[] args) {
 			} else {
 				color.r = baseColor.r;
 			}
-			
 			sfRectangleShape_setFillColor(rectangle, color);
-			sfRectangleShape_setSize(rectangle, sfVector2f(render.scale, render.scale));
-			sfRectangleShape_setOrigin(rectangle, sfVector2f(
-				render.calculateX(key[0]), 
-				render.calculateY(key[1])
-			));
-			sfRenderWindow_drawRectangleShape(window, rectangle, null);
+			
+			wx = render.calculateX(key[0]);
+			wy = render.calculateY(key[1]);
+			if (wx <= 0+render.scale && wx >= -render.windowWidth-render.scale && 
+				wy <= 0+render.scale && wy >= -render.windowHeight-render.scale) {
+				sfRectangleShape_setOrigin(rectangle, sfVector2f(
+					wx, 
+					wy
+				));
+				sfRenderWindow_drawRectangleShape(window, rectangle, null);
+			}
   	}
 
+		sfRectangleShape_setFillColor(rectangle, cellColor);
+		//sfRectangleShape_setSize(rectangle, sfVector2f(render.scale, render.scale));
 		foreach (key, value; grid.alive) {
-			sfRectangleShape_setFillColor(rectangle, cellColor);
-			sfRectangleShape_setSize(rectangle, sfVector2f(render.scale, render.scale));
-			sfRectangleShape_setOrigin(rectangle, sfVector2f(
-				render.calculateX(key[0]), 
-				render.calculateY(key[1])
-			));
-			sfRenderWindow_drawRectangleShape(window, rectangle, null);
+			wx = render.calculateX(key[0]);
+			wy = render.calculateY(key[1]);
+			
+			if (wx <= 0+render.scale && wx >= -render.windowWidth-render.scale && 
+				wy <= 0+render.scale && wy >= -render.windowHeight-render.scale) {
+				sfRectangleShape_setOrigin(rectangle, sfVector2f(
+					wx, 
+					wy
+				));
+				sfRenderWindow_drawRectangleShape(window, rectangle, null);
+			}
 		}
 
 		sfRenderWindow_display(window);
