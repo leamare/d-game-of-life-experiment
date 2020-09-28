@@ -60,6 +60,8 @@ int main(string[] args) {
 		cast(byte)(jsonConf["aliveColor"]["a"].integer)
 	);
 
+	const string baseRule = jsonConf["baseRule"].str;
+
 	const ubyte fadeOutSpeed = cast(byte)(jsonConf["fadeOutSpeed"].integer);
 	const ubyte ditFadeOutSpeed = cast(byte)(jsonConf["ditFadeOutSpeed"].integer);
 
@@ -90,7 +92,7 @@ int main(string[] args) {
 
 	uint gen = 0;
 
-	auto grid = GridStruct(gridWidth, gridHeight, deadMaxColor);
+	auto grid = GridStruct(gridWidth, gridHeight, deadMaxColor, baseRule);
 
 	grid.initGrid(buf);
 
@@ -130,7 +132,7 @@ int main(string[] args) {
 
 		gen++;
 
-		printf("Generation: %d\t- Cells: %d\n", gen, grid.alive.length);
+		// printf("Generation: %d\t- Cells: %llu\n", gen, grid.alive.length);
 
 		// FIXME: drawing cells
 

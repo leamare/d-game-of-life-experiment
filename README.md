@@ -6,10 +6,7 @@ SFML used for graphics. Capable of loading RLE files or generating a random grid
 
 TODO: 
  - [x] Sparse implementation (using Dlang's assoc arrays)
- - [ ] Different rules
-   - [ ] Primary rule
-   - [ ] Allow rule override from RLE (config)
-   - [ ] Parse B/S notation
+ - [x] Different rules
  - [ ] Camera movement
  - [ ] Multithreading
  - [ ] Saving resulting generations as BMPs

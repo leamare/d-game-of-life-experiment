@@ -15,6 +15,9 @@ struct GridStruct {
   int gridWidth, gridHeight;
   ubyte deadMaxColor;
 
+  bool[int] ruleB;
+  bool[int] ruleS;
+
   bool[Coord] alive;
   ubyte[Coord] dead;
 
@@ -26,6 +29,30 @@ struct GridStruct {
     } else {
       generateRandomGrid();
     }
+  }
+
+  void setRule(string rule) {
+    bool[int] b;
+    bool[int] s;
+    bool isb = false;
+    auto const sz = rule.length;
+    for (int i = 0; i < sz; i++) {
+      if (rule[i] == '/') {
+        isb = false;
+      } else if (rule[i] == 'b' || rule[i] == 'B') {
+        isb = true;
+      } else if (rule[i] == 's' || rule[i] == 'S') {
+        isb = false;
+      } else if (rule[i] >= '0' && rule[i] <= '9') {
+        if (isb) {
+          b[ rule[i]-'0' ] = true;
+        } else {
+          s[ rule[i]-'0' ] = true;
+        }
+      }
+    }
+    this.ruleB = b;
+    this.ruleS = s;
   }
 
   void generateRandomGrid() {
@@ -132,6 +159,10 @@ struct GridStruct {
 
           assignVal = "";
 
+          if ("rule" in vars) {
+            this.setRule(vars["rule"]);
+          }
+
           foreach (k, value; vars) {
             writeln(k ~ " = " ~ value);
           }
@@ -217,14 +248,14 @@ struct GridStruct {
       }
       
       if (k in this.alive && this.alive[k]) {
-        if (nb == 2 || nb == 3) {
+        if (nb in this.ruleS) {
           updated[k] = true;
         } else {
           updated.remove(k);
           this.dead[k] = 1;
         }
       } else {
-        if (nb == 3) {
+        if (nb in this.ruleB) {
           updated[k] = true;
           if (k in this.dead)
             this.dead.remove(k);
@@ -237,10 +268,11 @@ struct GridStruct {
     this.alive = updated;
   }
 
-  this(int gw, int gh, ubyte deadMaxColor) {
+  this(int gw, int gh, ubyte deadMaxColor, string baseRule) {
     this.gridHeight = gh;
     this.gridWidth = gw;
     this.deadMaxColor = deadMaxColor;
+    this.setRule(baseRule);
 
     //this.generateRandomGrid();
     //this.initGrid();
