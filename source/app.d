@@ -139,6 +139,14 @@ int main(string[] args) {
 		if (sfKeyboard_isKeyPressed(sfKeyDown) || sfKeyboard_isKeyPressed(sfKeyS)) {
 			render.shiftViewportPosY(1);
 		}
+
+		if (sfKeyboard_isKeyPressed(sfKeyAdd) || sfKeyboard_isKeyPressed(sfKeyEqual)) {
+			render.shiftScale(1);
+		}
+		if (sfKeyboard_isKeyPressed(sfKeyDash) || sfKeyboard_isKeyPressed(sfKeySubtract)) {
+			render.shiftScale(-1);
+		}
+
 		
 		grid.iterate();
 
