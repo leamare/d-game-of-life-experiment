@@ -127,6 +127,18 @@ int main(string[] args) {
     	}
 		}
 
+		if (sfKeyboard_isKeyPressed(sfKeyLeft) || sfKeyboard_isKeyPressed(sfKeyA)) {
+			render.shiftViewportPosX(-1);
+		}
+		if (sfKeyboard_isKeyPressed(sfKeyRight) || sfKeyboard_isKeyPressed(sfKeyD)) {
+			render.shiftViewportPosX(1);
+		}
+		if (sfKeyboard_isKeyPressed(sfKeyUp) || sfKeyboard_isKeyPressed(sfKeyW)) {
+			render.shiftViewportPosY(-1);
+		}
+		if (sfKeyboard_isKeyPressed(sfKeyDown) || sfKeyboard_isKeyPressed(sfKeyS)) {
+			render.shiftViewportPosY(1);
+		}
 		
 		grid.iterate();
 
