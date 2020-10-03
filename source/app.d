@@ -42,6 +42,8 @@ int main(string[] args) {
 	if (exists(configFname)) {
 		jsonConf = parseJSON(readText(configFname));
 	}
+	
+
 	// TODO: there may be a version of default config
 
 	// init defaults
@@ -59,6 +61,10 @@ int main(string[] args) {
 		cast(byte)(jsonConf["aliveColor"]["b"].integer), 
 		cast(byte)(jsonConf["aliveColor"]["a"].integer)
 	);
+
+	const auto fontSize = jsonConf["fontSize"].integer;
+	bool showGenInfo = jsonConf["showGenInfo"].boolean;
+	bool showHelp = false;
 
 	const string baseRule = jsonConf["baseRule"].str;
 
@@ -102,11 +108,25 @@ int main(string[] args) {
 	DerelictSFML2Graphics.load("libs\\csfml-system-2.dll");
 	DerelictSFML2Window.load("libs\\csfml-window-2.dll");
 
+	auto defFont = sfFont_createFromFile("C:\\windows\\fonts\\arial.ttf");
+
 	auto mode = sfVideoMode(render.windowWidth, render.windowHeight);
 	auto window = sfRenderWindow_create(mode, "Game of Life experiment", sfResize | sfClose, null);
 
 	if (!window)
     return 1;
+
+	auto GenNum = sfText_create();
+	sfText_setFont(GenNum, defFont);
+	sfText_setPosition(GenNum, sfVector2f(10, 10));
+	sfText_setCharacterSize(GenNum, cast(int) fontSize);
+	sfText_setColor(GenNum, sfWhite);
+	sfText_setStyle(GenNum, sfTextBold);
+
+	auto infoBlockBg = sfRectangleShape_create();
+	auto textContainer = sfText_getGlobalBounds(GenNum);
+	sfRectangleShape_setFillColor(infoBlockBg, sfColor(0, 0, 0, 164));
+	sfRectangleShape_setOrigin(infoBlockBg, sfVector2f(0, 0));
 
 	auto rectangle = sfRectangleShape_create();
 
@@ -126,6 +146,8 @@ int main(string[] args) {
 				render.recalculateScale();
     	}
 		}
+
+		// key presses
 
 		if (sfKeyboard_isKeyPressed(sfKeyLeft) || sfKeyboard_isKeyPressed(sfKeyA)) {
 			render.shiftViewportPosX(-1);
@@ -152,15 +174,17 @@ int main(string[] args) {
 		if (sfKeyboard_isKeyPressed(sfKeyHome) || sfKeyboard_isKeyPressed(sfKeyReturn)) {
 			render.setViewportPos(0, 0);
 		}
+		if (event.key.type == sfEvtKeyReleased && event.key.code == sfKeyF2) {
+			showGenInfo = !showGenInfo;
+			event.key.code = 0;
+		}
 
 		
 		grid.iterate();
 
 		gen++;
 
-		// printf("Generation: %d\t- Cells: %llu\n", gen, grid.alive.length);
-
-		// FIXME: drawing cells
+		// Drawing cells
 
 		auto color = sfColor(baseColor.r, baseColor.g, baseColor.b, 0);
 		int wx, wy;
@@ -189,7 +213,6 @@ int main(string[] args) {
   	}
 
 		sfRectangleShape_setFillColor(rectangle, cellColor);
-		//sfRectangleShape_setSize(rectangle, sfVector2f(render.scale, render.scale));
 		foreach (key, value; grid.alive) {
 			wx = render.calculateX(key[0]);
 			wy = render.calculateY(key[1]);
@@ -202,6 +225,17 @@ int main(string[] args) {
 				));
 				sfRenderWindow_drawRectangleShape(window, rectangle, null);
 			}
+		}
+
+		// displaying info
+
+		if (showGenInfo) {
+			sfText_setString(GenNum, std.string.toStringz(format("Generation %d\nscale: %d", gen, render.scale)));
+			textContainer = sfText_getGlobalBounds(GenNum);
+			sfRectangleShape_setSize(infoBlockBg, sfVector2f(textContainer.width + 20, textContainer.height + 30));
+
+			sfRenderWindow_drawRectangleShape(window, infoBlockBg, null);
+			sfRenderWindow_drawText(window, GenNum, null);
 		}
 
 		sfRenderWindow_display(window);

@@ -1,13 +1,14 @@
 {
   "baseRule": "B3/S23",
+  
   "baseColor": {
     "r": 0, "g": 96, "b": 255, "a": 224
   },
-
   "aliveColor": {
     "r": 255, "g": 255, "b": 255, "a": 255
   },
-
+  "fontSize": 24,
+  "showGenInfo": true,
 
   "fadeOutSpeed": 8,
   "ditFadeOutSpeed": 4,
