@@ -1,5 +1,9 @@
 {
   "baseRule": "B3/S23",
+
+  "boardFixed": true,
+  "boardWidth": 0,
+  "boardHeight": 0,
   
   "baseColor": {
     "r": 0, "g": 96, "b": 255, "a": 224

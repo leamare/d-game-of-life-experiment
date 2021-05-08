@@ -86,6 +86,8 @@ int main(string[] args) {
 	const int gridWidth = aspectRatioX * gridMultiplier;
 	const int gridHeight = aspectRatioY * gridMultiplier;
 
+	const bool isFixed = cast(bool)(jsonConf["boardFixed"].boolean);
+
 	// load grid from file
 
 	string buf = "";
@@ -98,7 +100,7 @@ int main(string[] args) {
 
 	uint gen = 0;
 
-	auto grid = GridStruct(gridWidth, gridHeight, deadMaxColor, baseRule);
+	auto grid = GridStruct(gridWidth, gridHeight, deadMaxColor, baseRule, isFixed);
 
 	grid.initGrid(buf);
 

@@ -9,6 +9,9 @@ import std.conv;
 import std.string;
 import core.stdc.string : strlen;
 
+// import std.parallelism;
+// import std.atomic;
+
 alias Coord = Tuple!(int, int);
 
 struct GridStruct {
@@ -20,6 +23,8 @@ struct GridStruct {
 
   bool[Coord] alive;
   ubyte[Coord] dead;
+
+  bool isFixed;
 
   void initGrid(string buf) {
     auto const sz = buf.length;
@@ -220,6 +225,9 @@ struct GridStruct {
     foreach (k, value; this.alive) {
       for (inb = k[0]-1, limitX = k[0]+1; inb <= limitX; inb++) {
         for (jnb = k[1]-1, limitY = k[1]+1; jnb <= limitY; jnb++) {
+          if (this.isFixed && (inb > this.gridWidth || inb < -this.gridWidth || jnb > this.gridHeight || jnb < -this.gridHeight)) {
+            continue;
+          }
           if (!(tuple(inb, jnb) in updated)) {
             keyNb[0] = inb;
             keyNb[1] = jnb;
@@ -268,11 +276,12 @@ struct GridStruct {
     this.alive = updated;
   }
 
-  this(int gw, int gh, ubyte deadMaxColor, string baseRule) {
+  this(int gw, int gh, ubyte deadMaxColor, string baseRule, bool isFixed) {
     this.gridHeight = gh;
     this.gridWidth = gw;
     this.deadMaxColor = deadMaxColor;
     this.setRule(baseRule);
+    this.isFixed = isFixed;
 
     //this.generateRandomGrid();
     //this.initGrid();
