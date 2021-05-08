@@ -67,6 +67,7 @@ int main(string[] args) {
 	bool showHelp = false;
 
 	const string baseRule = jsonConf["baseRule"].str;
+	const auto gridType = to!GridType(jsonConf["gridType"].str);
 
 	const ubyte fadeOutSpeed = cast(byte)(jsonConf["fadeOutSpeed"].integer);
 	const ubyte ditFadeOutSpeed = cast(byte)(jsonConf["ditFadeOutSpeed"].integer);
@@ -100,11 +101,16 @@ int main(string[] args) {
 
 	uint gen = 0;
 
-	auto grid = GridStruct(gridWidth, gridHeight, deadMaxColor, baseRule, isFixed);
+	//GridStruct grid;
+	GridSparse grid;
+
+	if (gridType == GridType.sparse) {
+		grid = new GridSparse(gridWidth, gridHeight, deadMaxColor, baseRule, isFixed);
+	}
 
 	grid.initGrid(buf);
 
-	auto render = Renderer(windowWidth, windowHeight, &grid);
+	auto render = Renderer(windowWidth, windowHeight, grid);
 
 	DerelictSFML2Graphics.load("libs\\csfml-graphics-2.dll");
 	DerelictSFML2Graphics.load("libs\\csfml-system-2.dll");

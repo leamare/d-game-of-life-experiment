@@ -3,6 +3,8 @@ module renderer;
 import grid;
 import std.algorithm;
 
+import std.stdio;
+
 struct Renderer {
   int windowWidth, windowHeight;
   int leftOffset, topOffset;
@@ -10,21 +12,25 @@ struct Renderer {
   int scale;
   GridStruct grid;
 
-  this(int ww, int wh, GridStruct* grid) {
+  this(int ww, int wh, GridStruct grid) {
     this.windowHeight = wh;
     this.windowWidth = ww;
-    this.grid = *grid;
+    this.grid = grid;
     this.viewX = 0;
     this.viewY = 0;
-
+    
     this.recalculateScale();
   }
 
   void recalculateScale() {
-    if (this.windowWidth < this.grid.gridWidth || this.windowHeight < this.grid.gridHeight) {
+    writeln(this.grid);
+    auto gw = this.grid.getWidth();
+    auto gh = this.grid.getHeight();
+
+    if (this.windowWidth < gw || this.windowHeight < gh) {
       this.scale = 1;
     } else {
-      this.scale = min(this.windowWidth/this.grid.gridWidth, this.windowHeight/this.grid.gridHeight);
+      this.scale = min(this.windowWidth/gw, this.windowHeight/gh);
     }
     
 		this.leftOffset = (this.windowWidth % this.scale)/2;

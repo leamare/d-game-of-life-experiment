@@ -1,6 +1,8 @@
 {
   "baseRule": "B3/S23",
 
+  "gridType": "sparse",
+
   "boardFixed": true,
   "boardWidth": 0,
   "boardHeight": 0,

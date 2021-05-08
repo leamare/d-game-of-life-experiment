@@ -1,4 +1,6 @@
-module grid;
+module grid.sparse;
+
+import grid.gridinterface;
 
 import std.typecons;
 import std.algorithm;
@@ -12,9 +14,7 @@ import core.stdc.string : strlen;
 // import std.parallelism;
 // import std.atomic;
 
-alias Coord = Tuple!(int, int);
-
-struct GridStruct {
+class GridSparse : GridStruct {
   int gridWidth, gridHeight;
   ubyte deadMaxColor;
 
@@ -275,6 +275,9 @@ struct GridStruct {
 
     this.alive = updated;
   }
+
+  int getWidth() { return this.gridWidth; }
+  int getHeight() { return this.gridHeight; }
 
   this(int gw, int gh, ubyte deadMaxColor, string baseRule, bool isFixed) {
     this.gridHeight = gh;
