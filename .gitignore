@@ -17,5 +17,7 @@ game-of-life-experiment-test-*
 *.sln
 libs/
 *.rle
+*.ttf
+lib/*
 
 config.json

@@ -4,8 +4,14 @@
 	],
 	"copyright": "leamare",
 	"dependencies": {
-		"derelict-sfml2": "~>3.0.2"
+		"bindbc-sdl": "~>1.4.7"
 	},
+	"subConfigurations": {
+		"bindbc-sdl": "dynamic"
+	},
+	"versions": [
+		"SDL_TTF_2012"
+	],
 	"description": "The Game of Life experiment",
 	"license": "GPL-3.0",
 	"name": "game-of-life-experiment"
