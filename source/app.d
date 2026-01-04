@@ -6,6 +6,11 @@ import std.conv;
 import std.string;
 import std.file;
 import std.json;
+import std.typecons;
+
+import core.thread;
+import core.sync.mutex;
+import core.atomic;
 
 import bindbc.sdl;
 
@@ -63,7 +68,6 @@ bool loadSDLLibraries() {
 	else version (OSX) {
 		auto sdlRet = loadSDL();
 		if (sdlRet != sdlSupport) {
-			// Try framework paths
 			sdlRet = loadSDL("/Library/Frameworks/SDL2.framework/SDL2");
 			if (sdlRet != sdlSupport) {
 				writeln("Failed to load SDL2 framework");
@@ -82,7 +86,6 @@ bool loadSDLLibraries() {
 	else version (linux) {
 		auto sdlRet = loadSDL();
 		if (sdlRet != sdlSupport) {
-			// Try common Linux library paths
 			sdlRet = loadSDL("libSDL2-2.0.so.0");
 			if (sdlRet != sdlSupport) {
 				sdlRet = loadSDL("libSDL2.so");
@@ -132,22 +135,54 @@ struct Color {
 	ubyte r, g, b, a;
 }
 
+alias Coord = Tuple!(int, int);
+
+struct GridSnapshot {
+	bool[Coord] alive;
+	ubyte[Coord] dead;
+	uint generation;
+}
+
+// Shared state between threads
+shared bool computeRunning = true;
+shared bool simulationPaused = false;
+__gshared Mutex gridMutex;
+__gshared GridSnapshot renderSnapshot;
+__gshared uint currentGeneration = 0;
+
+void computeThread(GridSparse grid) {
+	while (atomicLoad(computeRunning)) {
+		if (!atomicLoad(simulationPaused)) {
+			grid.iterate();
+			
+			// Update shared snapshot
+			gridMutex.lock();
+			scope(exit) gridMutex.unlock();
+			
+			renderSnapshot.alive = grid.alive.dup;
+			renderSnapshot.dead = grid.dead.dup;
+			currentGeneration++;
+			renderSnapshot.generation = currentGeneration;
+		} else {
+			// When paused, sleep briefly to avoid busy-waiting
+			Thread.sleep(dur!"msecs"(10));
+		}
+	}
+}
+
 int main(string[] args) {
 	string rlesrc = "";
 
-	// args
-
 	auto helpInformation = getopt(
-    args,
-    "file|f", "Path to RLE file containing a pattern", &rlesrc,
-  );
+		args,
+		"file|f", "Path to RLE file containing a pattern", &rlesrc,
+	);
 
 	if (helpInformation.helpWanted) {
 		defaultGetoptPrinter("Some information about the program.",
 			helpInformation.options);
 		return 0;
 	}
-
 
 	if (!loadSDLLibraries()) {
 		writeln("Error: Could not load SDL libraries");
@@ -196,7 +231,6 @@ int main(string[] args) {
 
 	const auto fontSize = cast(int)(jsonConf["fontSize"].integer);
 	bool showGenInfo = jsonConf["showGenInfo"].boolean;
-	bool showHelp = false;
 
 	const string baseRule = jsonConf["baseRule"].str;
 	const auto gridType = to!GridType(jsonConf["gridType"].str);
@@ -231,8 +265,6 @@ int main(string[] args) {
 
 	// init grid
 
-	uint gen = 0;
-
 	GridSparse grid;
 
 	if (gridType == GridType.sparse) {
@@ -240,6 +272,12 @@ int main(string[] args) {
 	}
 
 	grid.initGrid(buf);
+
+	// Initialize shared state
+	gridMutex = new Mutex();
+	renderSnapshot.alive = grid.alive.dup;
+	renderSnapshot.dead = grid.dead.dup;
+	renderSnapshot.generation = 0;
 
 	auto render = Renderer(windowWidth, windowHeight, grid);
 
@@ -277,8 +315,21 @@ int main(string[] args) {
 	}
 	scope(exit) if (font) TTF_CloseFont(font);
 
+	// Start computation thread
+	auto compThread = new Thread(() => computeThread(grid));
+	compThread.start();
+	scope(exit) {
+		atomicStore(computeRunning, false);
+		compThread.join();
+	}
+
 	bool running = true;
 	SDL_Event event;
+
+	// Local copy for rendering
+	bool[Coord] localAlive;
+	ubyte[Coord] localDead;
+	uint localGen = 0;
 
 	while (running) {
 		// Event handling
@@ -296,6 +347,11 @@ int main(string[] args) {
 			else if (event.type == SDL_KEYUP) {
 				if (event.key.keysym.sym == SDLK_F2) {
 					showGenInfo = !showGenInfo;
+				}
+				else if (event.key.keysym.sym == SDLK_SPACE) {
+					// Toggle pause
+					bool currentPause = atomicLoad(simulationPaused);
+					atomicStore(simulationPaused, !currentPause);
 				}
 			}
 		}
@@ -329,8 +385,14 @@ int main(string[] args) {
 			render.setViewportPos(0, 0);
 		}
 
-		grid.iterate();
-		gen++;
+		// Get snapshot of grid state (minimize lock time)
+		{
+			gridMutex.lock();
+			scope(exit) gridMutex.unlock();
+			localAlive = renderSnapshot.alive.dup;
+			localDead = renderSnapshot.dead.dup;
+			localGen = renderSnapshot.generation;
+		}
 
 		// Clear screen
 		SDL_SetRenderDrawColor(sdlRenderer, 0, 0, 0, 255);
@@ -343,7 +405,7 @@ int main(string[] args) {
 		rect.h = render.scale;
 
 		// Draw dead cells
-		foreach (key, value; grid.dead) {
+		foreach (key, value; localDead) {
 			ubyte alpha = cast(ubyte)(baseColor.a - (value - 1) * fadeOutSpeed);
 			ubyte r;
 			if (value < deadInitialTrail) {
@@ -366,7 +428,7 @@ int main(string[] args) {
 
 		// Draw alive cells
 		SDL_SetRenderDrawColor(sdlRenderer, cellColor.r, cellColor.g, cellColor.b, cellColor.a);
-		foreach (key, value; grid.alive) {
+		foreach (key, value; localAlive) {
 			wx = render.calculateX(key[0]);
 			wy = render.calculateY(key[1]);
 			
@@ -380,16 +442,16 @@ int main(string[] args) {
 
 		// Display info
 		if (showGenInfo && font) {
-			string infoText = format("Generation %d\nscale: %d", gen, render.scale);
+			bool isPaused = atomicLoad(simulationPaused);
+			string infoText = format("Generation %d\nscale: %d%s", localGen, render.scale, 
+				isPaused ? "\n[PAUSED]" : "");
 			
-			// Render text
 			SDL_Color textColor = {255, 255, 255, 255};
 			auto lines = infoText.split("\n");
 			int yPos = 10;
 			int maxWidth = 0;
 			int totalHeight = 0;
 			
-			// First pass: calculate dimensions
 			foreach (line; lines) {
 				int w, h;
 				TTF_SizeText(font, line.toStringz, &w, &h);
@@ -397,12 +459,10 @@ int main(string[] args) {
 				totalHeight += h;
 			}
 			
-			// Draw background
 			SDL_Rect bgRect = {0, 0, maxWidth + 20, totalHeight + 20};
 			SDL_SetRenderDrawColor(sdlRenderer, 0, 0, 0, 164);
 			SDL_RenderFillRect(sdlRenderer, &bgRect);
 			
-			// Second pass: render text
 			foreach (line; lines) {
 				auto surface = TTF_RenderText_Blended(font, line.toStringz, textColor);
 				if (surface) {
