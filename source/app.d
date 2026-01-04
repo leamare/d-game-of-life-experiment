@@ -354,9 +354,25 @@ int main(string[] args) {
 					atomicStore(simulationPaused, !currentPause);
 				}
 			}
+			else if (event.type == SDL_KEYDOWN && event.key.repeat == 0) {
+				// Single-press controls (no key repeat)
+				if (event.key.keysym.sym == SDLK_PLUS || event.key.keysym.sym == SDLK_KP_PLUS || 
+					event.key.keysym.sym == SDLK_EQUALS) {
+					render.shiftScale(1);
+				}
+				else if (event.key.keysym.sym == SDLK_MINUS || event.key.keysym.sym == SDLK_KP_MINUS) {
+					render.shiftScale(-1);
+				}
+				else if (event.key.keysym.sym == SDLK_DELETE || event.key.keysym.sym == SDLK_BACKSPACE) {
+					render.recalculateScale();
+				}
+				else if (event.key.keysym.sym == SDLK_HOME || event.key.keysym.sym == SDLK_RETURN) {
+					render.setViewportPos(0, 0);
+				}
+			}
 		}
 
-		// Key presses
+		// viewport movement
 		auto keyState = SDL_GetKeyboardState(null);
 
 		if (keyState[SDL_SCANCODE_LEFT] || keyState[SDL_SCANCODE_A]) {
@@ -370,19 +386,6 @@ int main(string[] args) {
 		}
 		if (keyState[SDL_SCANCODE_DOWN] || keyState[SDL_SCANCODE_S]) {
 			render.shiftViewportPosY(1);
-		}
-
-		if (keyState[SDL_SCANCODE_KP_PLUS] || keyState[SDL_SCANCODE_EQUALS]) {
-			render.shiftScale(1);
-		}
-		if (keyState[SDL_SCANCODE_MINUS] || keyState[SDL_SCANCODE_KP_MINUS]) {
-			render.shiftScale(-1);
-		}
-		if (keyState[SDL_SCANCODE_DELETE] || keyState[SDL_SCANCODE_BACKSPACE]) {
-			render.recalculateScale();
-		}
-		if (keyState[SDL_SCANCODE_HOME] || keyState[SDL_SCANCODE_RETURN]) {
-			render.setViewportPos(0, 0);
 		}
 
 		// Get snapshot of grid state (minimize lock time)
@@ -408,8 +411,13 @@ int main(string[] args) {
 		if (render.scale > 0) {
 			// Positive zoom
 			// Draw dead cells
+			import std.math : sqrt;
 			foreach (key, value; localDead) {
-				ubyte alpha = cast(ubyte)(baseColor.a - (value - 1) * fadeOutSpeed);
+				// Use sqrt fade curve for slower, more visible trails
+				float fadeProgress = cast(float)(value - 1) / deadMaxColor;
+				float fadeFactor = 1.0 - sqrt(fadeProgress);
+				if (fadeFactor < 0) fadeFactor = 0;
+				
 				ubyte r;
 				if (value < deadInitialTrail) {
 					r = cast(ubyte)(cellColor.r - (value - 1) * 2 * ditFadeOutSpeedMulti);
@@ -417,13 +425,16 @@ int main(string[] args) {
 					r = baseColor.r;
 				}
 				
+				ubyte alpha = cast(ubyte)(255 * fadeFactor);
+				if (alpha < 16) continue;
+				
 				wx = render.calculateX(key[0]);
 				wy = render.calculateY(key[1]);
 				
-				if (wx <= pixelSize && wx >= -render.windowWidth - pixelSize && 
-					wy <= pixelSize && wy >= -render.windowHeight - pixelSize) {
-					rect.x = -wx;
-					rect.y = -wy;
+				if (wx >= -pixelSize && wx <= render.windowWidth + pixelSize && 
+					wy >= -pixelSize && wy <= render.windowHeight + pixelSize) {
+					rect.x = wx;
+					rect.y = wy;
 					SDL_SetRenderDrawColor(sdlRenderer, r, baseColor.g, baseColor.b, alpha);
 					SDL_RenderFillRect(sdlRenderer, &rect);
 				}
@@ -435,25 +446,34 @@ int main(string[] args) {
 				wx = render.calculateX(key[0]);
 				wy = render.calculateY(key[1]);
 				
-				if (wx <= pixelSize && wx >= -render.windowWidth - pixelSize && 
-					wy <= pixelSize && wy >= -render.windowHeight - pixelSize) {
-					rect.x = -wx;
-					rect.y = -wy;
+				if (wx >= -pixelSize && wx <= render.windowWidth + pixelSize && 
+					wy >= -pixelSize && wy <= render.windowHeight + pixelSize) {
+					rect.x = wx;
+					rect.y = wy;
 					SDL_RenderFillRect(sdlRenderer, &rect);
 				}
 			}
 		} else {
-			// Negative zoom
-			// Group cells by their pixel position
+			// Negative zoom: blend colors based on cell density per pixel
 			alias PixelCoord = Tuple!(int, int);
-			bool[PixelCoord] alivePixels;
-			ubyte[PixelCoord] deadPixels;
+			
+			struct PixelData {
+				int aliveCount = 0;
+				int deadCount = 0;
+				float deadValueSum = 0;
+			}
+			
+			PixelData[PixelCoord] pixels;
+			int cellsPerPixel = render.getCellsPerPixel();
+			int maxCellsPerPixel = cellsPerPixel * cellsPerPixel;
 
-			// Collect alive cells into pixel groups
+			// collect alive cells into pixel groups
 			foreach (key, value; localAlive) {
 				int gx = render.getCellGroupX(key[0]);
 				int gy = render.getCellGroupY(key[1]);
-				alivePixels[tuple(gx, gy)] = true;
+				auto pixelKey = tuple(gx, gy);
+				if (pixelKey !in pixels) pixels[pixelKey] = PixelData();
+				pixels[pixelKey].aliveCount++;
 			}
 
 			// Collect dead cells into pixel groups
@@ -461,47 +481,82 @@ int main(string[] args) {
 				int gx = render.getCellGroupX(key[0]);
 				int gy = render.getCellGroupY(key[1]);
 				auto pixelKey = tuple(gx, gy);
-				if (pixelKey !in alivePixels) {
-					if (pixelKey !in deadPixels || value < deadPixels[pixelKey]) {
-						deadPixels[pixelKey] = value;
+				if (pixelKey !in pixels) pixels[pixelKey] = PixelData();
+				pixels[pixelKey].deadCount++;
+				pixels[pixelKey].deadValueSum += value;
+			}
+
+			// Draw all pixels with blended colors based on density
+			foreach (pixelKey, data; pixels) {
+				int screenX = pixelKey[0] + render.windowWidth / 2;
+				int screenY = pixelKey[1] + render.windowHeight / 2;
+				
+				if (screenX < -1 || screenX > render.windowWidth || 
+					screenY < -1 || screenY > render.windowHeight) {
+					continue;
+				}
+				
+				rect.x = screenX;
+				rect.y = screenY;
+				
+				import std.math : sqrt;
+				float rawAliveDensity = cast(float)data.aliveCount / maxCellsPerPixel;
+				float rawDeadDensity = cast(float)data.deadCount / maxCellsPerPixel;
+
+				float aliveDensity = sqrt(rawAliveDensity);
+				float deadDensity = sqrt(rawDeadDensity);
+				
+				if (data.aliveCount > 0) {
+					// Blend between black and cell color based on alive density
+					ubyte r = cast(ubyte)(cellColor.r * aliveDensity);
+					ubyte g = cast(ubyte)(cellColor.g * aliveDensity);
+					ubyte b = cast(ubyte)(cellColor.b * aliveDensity);
+					
+					if (data.deadCount > 0) {
+						float avgDeadValue = data.deadValueSum / data.deadCount;
+						float fadeProgress = (avgDeadValue - 1) / cast(float)deadMaxColor;
+						float deadFade = 1.0 - sqrt(fadeProgress);
+						float deadBrightness = deadDensity * deadFade * (1.0 - aliveDensity * 0.5);
+						
+						float deadR;
+						if (avgDeadValue < deadInitialTrail) {
+							deadR = cellColor.r - (avgDeadValue - 1) * 2 * ditFadeOutSpeedMulti;
+						} else {
+							deadR = baseColor.r;
+						}
+						r = cast(ubyte)(r + deadR * deadBrightness * 0.5);
+						g = cast(ubyte)(g + baseColor.g * deadBrightness * 0.5);
+						b = cast(ubyte)(b + baseColor.b * deadBrightness * 0.5);
 					}
-				}
-			}
-
-			// Draw dead pixels
-			foreach (pixelKey, value; deadPixels) {
-				ubyte alpha = cast(ubyte)(baseColor.a - (value - 1) * fadeOutSpeed);
-				ubyte r;
-				if (value < deadInitialTrail) {
-					r = cast(ubyte)(cellColor.r - (value - 1) * 2 * ditFadeOutSpeedMulti);
+					
+					ubyte alpha = cast(ubyte)(255 * (aliveDensity + deadDensity * 0.5));
+					if (alpha < 64) alpha = 64;
+					
+					SDL_SetRenderDrawColor(sdlRenderer, r, g, b, alpha);
+				} else if (data.deadCount > 0) {
+					float avgDeadValue = data.deadValueSum / data.deadCount;
+					float fadeProgress = (avgDeadValue - 1) / cast(float)deadMaxColor;
+					float fadeFactor = 1.0 - sqrt(fadeProgress);
+					if (fadeFactor < 0) fadeFactor = 0;
+					
+					ubyte r;
+					if (avgDeadValue < deadInitialTrail) {
+						r = cast(ubyte)((cellColor.r - (avgDeadValue - 1) * 2 * ditFadeOutSpeedMulti) * deadDensity);
+					} else {
+						r = cast(ubyte)(baseColor.r * deadDensity);
+					}
+					ubyte g = cast(ubyte)(baseColor.g * deadDensity);
+					ubyte b = cast(ubyte)(baseColor.b * deadDensity);
+					
+					ubyte alpha = cast(ubyte)(255 * deadDensity * fadeFactor);
+					if (alpha < 16) continue;
+					
+					SDL_SetRenderDrawColor(sdlRenderer, r, g, b, alpha);
 				} else {
-					r = baseColor.r;
+					continue;
 				}
 				
-				int screenX = pixelKey[0] + render.windowWidth / 2;
-				int screenY = pixelKey[1] + render.windowHeight / 2;
-				
-				if (screenX >= -1 && screenX <= render.windowWidth && 
-					screenY >= -1 && screenY <= render.windowHeight) {
-					rect.x = screenX;
-					rect.y = screenY;
-					SDL_SetRenderDrawColor(sdlRenderer, r, baseColor.g, baseColor.b, alpha);
-					SDL_RenderFillRect(sdlRenderer, &rect);
-				}
-			}
-
-			// Draw alive pixels
-			SDL_SetRenderDrawColor(sdlRenderer, cellColor.r, cellColor.g, cellColor.b, cellColor.a);
-			foreach (pixelKey, value; alivePixels) {
-				int screenX = pixelKey[0] + render.windowWidth / 2;
-				int screenY = pixelKey[1] + render.windowHeight / 2;
-				
-				if (screenX >= -1 && screenX <= render.windowWidth && 
-					screenY >= -1 && screenY <= render.windowHeight) {
-					rect.x = screenX;
-					rect.y = screenY;
-					SDL_RenderFillRect(sdlRenderer, &rect);
-				}
+				SDL_RenderFillRect(sdlRenderer, &rect);
 			}
 		}
 

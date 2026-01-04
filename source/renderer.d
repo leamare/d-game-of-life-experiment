@@ -68,11 +68,13 @@ struct Renderer {
 
 	void shiftScale(int mod) {
 		int newScale = this.scale + mod;
-		// Skip 0 (invalid) and handle transition between positive/negative
+		// Skip 0 and -1
 		if (this.scale > 0 && newScale <= 0) {
-			this.scale = -1;  // Transition from 1 to -1
+			this.scale = -2;
 		} else if (this.scale < 0 && newScale >= 0) {
-			this.scale = 1;   // Transition from -1 to 1
+			this.scale = 1;
+		} else if (newScale == -1) {
+			this.scale = mod > 0 ? 1 : -2;
 		} else {
 			this.scale = newScale;
 		}
@@ -85,56 +87,45 @@ struct Renderer {
 		this.recalculateOffsets();
 	}
 
-	// Returns the size in pixels of a rendered unit
-	// For positive scale: this is the cell size in pixels
-	// For negative scale: this is 1 (one pixel per cell group)
 	int getPixelSize() {
 		return this.scale > 0 ? this.scale : 1;
 	}
 
-	// Returns how many cells are grouped into one pixel
-	// For positive scale: 1 (each cell is separate)
-	// For negative scale: abs(scale) cells per pixel
 	int getCellsPerPixel() {
 		return this.scale > 0 ? 1 : -this.scale;
 	}
-
-	// For positive scale: returns screen position for a cell
-	// For negative scale: returns screen position for a cell group
 	int calculateX(int coord) {
 		if (this.scale > 0) {
-			return (coord + this.viewX) * this.scale - this.windowWidth / 2 + this.scale / 2;
+			return (coord - this.viewX) * this.scale + this.windowWidth / 2 - this.scale / 2;
 		} else {
 			int cellsPerPixel = -this.scale;
-			int groupX = cast(int)floor(cast(float)(coord + this.viewX) / cellsPerPixel);
-			return groupX - this.windowWidth / 2;
+			int groupX = cast(int)floor(cast(float)(coord - this.viewX) / cellsPerPixel);
+			return groupX + this.windowWidth / 2;
 		}
 	}
 
 	int calculateY(int coord) {
 		if (this.scale > 0) {
-			return (coord + this.viewY) * this.scale - this.windowHeight / 2 + this.scale / 2;
+			return (coord - this.viewY) * this.scale + this.windowHeight / 2 - this.scale / 2;
 		} else {
 			int cellsPerPixel = -this.scale;
-			int groupY = cast(int)floor(cast(float)(coord + this.viewY) / cellsPerPixel);
-			return groupY - this.windowHeight / 2;
+			int groupY = cast(int)floor(cast(float)(coord - this.viewY) / cellsPerPixel);
+			return groupY + this.windowHeight / 2;
 		}
 	}
 
-	// Get the cell group coordinate for a cell (used for combining cells at negative zoom)
 	int getCellGroupX(int cellX) {
 		if (this.scale > 0) return cellX;
 		int cellsPerPixel = -this.scale;
-		return cast(int)floor(cast(float)(cellX + this.viewX) / cellsPerPixel);
+		return cast(int)floor(cast(float)(cellX - this.viewX) / cellsPerPixel);
 	}
 
 	int getCellGroupY(int cellY) {
 		if (this.scale > 0) return cellY;
 		int cellsPerPixel = -this.scale;
-		return cast(int)floor(cast(float)(cellY + this.viewY) / cellsPerPixel);
+		return cast(int)floor(cast(float)(cellY - this.viewY) / cellsPerPixel);
 	}
 
-	// Get scale as a human-readable string
 	string getScaleString() {
 		import std.format;
 		if (this.scale > 0) {
