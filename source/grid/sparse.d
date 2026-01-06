@@ -30,7 +30,13 @@ class GridSparse : GridStruct {
     auto const sz = buf.length;
     writeln(sz);
     if (sz) {
-      generateRLEGrid(buf.dup);
+      if (buf.length > 4 && buf[0..4] == "[M2]") {
+        generateMacrocellGrid(buf);
+      } else if (buf.length > 6 && buf[0..6] == "#MCell") {
+        generateMCellGrid(buf);
+      } else {
+        generateRLEGrid(buf.dup);
+      }
     } else {
       generateRandomGrid();
     }
@@ -202,6 +208,216 @@ class GridSparse : GridStruct {
         
       }
     }
+  }
+
+  void generateMacrocellGrid(string buf) {
+    import std.array : split, array;
+    import std.string : strip, startsWith, indexOf;
+    import std.math : pow;
+    
+    auto lines = buf.split("\n");
+    
+    struct MCNode {
+      int level;
+      bool[64] leafPattern;
+      int[4] children;
+    }
+    
+    MCNode[] nodes;
+    // Node 0 is implicitly empty (all zeros)
+    nodes ~= MCNode(3, (bool[64]).init, [0,0,0,0]);
+    
+    foreach (line; lines) {
+      line = strip(line);
+      if (line.length == 0) continue;
+      
+      if (line.startsWith("[M2]")) continue;
+      
+      if (line.startsWith("#R ") || line.startsWith("#r ")) {
+        this.setRule(line[3..$]);
+        continue;
+      }
+      
+      if (line.startsWith("#")) continue;
+      
+      if (line.indexOf('$') != -1 || (line.length > 0 && (line[0] == '.' || line[0] == '*'))) {
+        bool[64] pattern;
+        int px = 0, py = 0;
+        
+        foreach (c; line) {
+          if (c == '$') {
+            py++;
+            px = 0;
+          } else if (c == '*') {
+            if (px < 8 && py < 8) {
+              pattern[py * 8 + px] = true;
+            }
+            px++;
+          } else if (c == '.') {
+            px++;
+          }
+        }
+        
+        nodes ~= MCNode(3, pattern, [0,0,0,0]);
+        continue;
+      }
+      
+      auto parts = line.split(" ");
+      if (parts.length >= 5) {
+        try {
+          int level = parse!int(parts[0]);
+          int[4] children;
+          for (int i = 0; i < 4; i++) {
+            children[i] = parse!int(parts[i + 1]);
+          }
+          nodes ~= MCNode(level, (bool[64]).init, children);
+        } catch (Exception e) {
+          continue;
+        }
+      }
+    }
+    
+    if (nodes.length <= 1) {
+      writeln("No valid nodes found in macrocell file");
+      generateRandomGrid();
+      return;
+    }
+    
+    int rootIdx = cast(int)(nodes.length - 1);
+    int rootLevel = nodes[rootIdx].level;
+    
+    enum int MAX_EXTRACT_SIZE = 16384;
+    enum int MAX_CELLS = 10_000_000;
+    
+    long fullSize = cast(long)1 << rootLevel;
+    writeln("Macrocell pattern size: 2^", rootLevel, " = ", fullSize, " x ", fullSize);
+    
+    int extractSize = MAX_EXTRACT_SIZE;
+    if (fullSize < extractSize) extractSize = cast(int)fullSize;
+    
+    int extractOffset = extractSize / 2;
+    
+    long centerX = fullSize / 2;
+    long centerY = fullSize / 2;
+    long minX = centerX - extractOffset;
+    long maxX = centerX + extractOffset;
+    long minY = centerY - extractOffset;
+    long maxY = centerY + extractOffset;
+    
+    this.gridWidth = extractSize;
+    this.gridHeight = extractSize;
+    
+    int cellCount = 0;
+    
+    void extractCells(int nodeIdx, long x, long y, int level) {
+      if (nodeIdx == 0) return;
+      if (nodeIdx < 0 || nodeIdx >= nodes.length) return;
+      if (cellCount >= MAX_CELLS) return;
+      
+      long nodeSize = cast(long)1 << level;
+      
+      if (x + nodeSize <= minX || x >= maxX || y + nodeSize <= minY || y >= maxY) {
+        return;
+      }
+      
+      auto node = nodes[nodeIdx];
+      
+      if (level == 3) {
+        for (int py = 0; py < 8 && cellCount < MAX_CELLS; py++) {
+          for (int px = 0; px < 8 && cellCount < MAX_CELLS; px++) {
+            if (node.leafPattern[py * 8 + px]) {
+              long cellX = x + px;
+              long cellY = y + py;
+              if (cellX >= minX && cellX < maxX && cellY >= minY && cellY < maxY) {
+                auto key = tuple(cast(int)(cellX - centerX), cast(int)(cellY - centerY));
+                this.alive[key] = true;
+                cellCount++;
+              }
+            }
+          }
+        }
+        return;
+      }
+      
+      long halfSize = nodeSize / 2;
+      
+      // NW, NE, SW, SE
+      extractCells(node.children[0], x, y, level - 1);
+      extractCells(node.children[1], x + halfSize, y, level - 1);
+      extractCells(node.children[2], x, y + halfSize, level - 1);
+      extractCells(node.children[3], x + halfSize, y + halfSize, level - 1);
+    }
+    
+    extractCells(rootIdx, 0, 0, rootLevel);
+    writeln("Extracted ", this.alive.length, " cells from macrocell pattern (limited to ", extractSize, "x", extractSize, " region)");
+  }
+  
+  void generateMCellGrid(string buf) {
+    import std.array : split;
+    import std.string : strip, startsWith;
+    
+    auto lines = buf.split("\n");
+    
+    int gridX = 0, gridY = 0;
+    bool inPattern = false;
+    int xOffset = 0, yOffset = 0;
+    int maxX = 0, maxY = 0;
+    
+    foreach (line; lines) {
+      line = strip(line);
+      
+      if (line.startsWith("#RULE ")) {
+        this.setRule(line[6..$]);
+      } else if (line.startsWith("#BOARD ")) {
+        auto parts = line[7..$].split("x");
+        if (parts.length >= 2) {
+          try {
+            maxX = parse!int(parts[0]);
+            maxY = parse!int(parts[1]);
+          } catch (Exception e) {}
+        }
+      }
+    }
+    
+    foreach (line; lines) {
+      line = strip(line);
+      
+      if (line == "#LIFE") {
+        inPattern = true;
+        continue;
+      }
+      
+      if (line.startsWith("#")) continue;
+      
+      if (inPattern && line.length > 0) {
+        gridX = 0;
+        foreach (c; line) {
+          if (c == '*' || c == 'O' || c == 'o') {
+            auto key = tuple(gridX - xOffset, gridY - yOffset);
+            this.alive[key] = true;
+            if (gridX > maxX) maxX = gridX;
+          }
+          gridX++;
+        }
+        gridY++;
+        if (gridY > maxY) maxY = gridY;
+      }
+    }
+    
+    xOffset = maxX / 2;
+    yOffset = maxY / 2;
+    
+    bool[Coord] centered;
+    foreach (key, value; this.alive) {
+      auto newKey = tuple(key[0] - xOffset, key[1] - yOffset);
+      centered[newKey] = true;
+    }
+    this.alive = centered;
+    
+    if (this.gridWidth < maxX) this.gridWidth = maxX;
+    if (this.gridHeight < maxY) this.gridHeight = maxY;
+    
+    writeln("Loaded MCell pattern with ", this.alive.length, " cells");
   }
 
   void iterate() {
